@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Medidor de som</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#edf1f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1317" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230E1A21'/%3E%3Cg stroke-linecap='round' stroke-width='9'%3E%3Cpath d='M26 44v12' stroke='%232A9E6F'/%3E%3Cpath d='M38 34v32' stroke='%233FD18F'/%3E%3Cpath d='M50 24v52' stroke='white'/%3E%3Cpath d='M62 36v28' stroke='%233FD18F'/%3E%3Cpath d='M74 42v16' stroke='%232A9E6F'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #edf1f4; --card: #ffffff; --tile: #e3e9ee; --ink: #192127; --muted: #5a6873; --line: #d3dbe1;
+    --ok: #168a58; --warn: #c27a00; --bad: #d3342b; --low: #2f6fa8;
+    --btn: #192127; --btn-ink: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1317; --card: #182027; --tile: #1f2a33; --ink: #e8eef2; --muted: #8c9ba6; --line: #2b3741;
+      --ok: #3fd18f; --warn: #f2aa38; --bad: #ff5e53; --low: #6fa8dc;
+      --btn: #e8eef2; --btn-ink: #0f1317;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.45; }
+  main { max-width: 860px; margin: 0 auto; padding: 22px 18px 48px; }
+  .top { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .top h1 { font-size: 1.35rem; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .top small { display: block; color: var(--muted); font-size: 0.8rem; }
+  .top .grow { flex: 1; min-width: 0; }
+  .chip { font-size: 0.8rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; color: var(--muted); background: color-mix(in srgb, currentColor 14%, transparent); white-space: nowrap; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; margin-bottom: 14px; }
+  #erro { color: var(--bad); font-weight: 500; margin: 0 0 12px; }
+  #erro:empty { display: none; }
+
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: end; }
+  label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+  select, input[type=number] { width: 100%; font: inherit; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  button { font: inherit; border-radius: 12px; border: 1px solid var(--line); padding: 11px 16px; background: var(--card); color: var(--ink); cursor: pointer; font-weight: 600; }
+  button.primary { background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--ok); outline-offset: 2px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+  .hero .big { font-size: clamp(3.6rem, 13vw, 5.4rem); font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .hero .big small { font-size: 1.05rem; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 6px; }
+  .legend { color: var(--muted); font-size: 0.85rem; }
+  .pill { display: inline-block; margin-top: 12px; font-weight: 650; font-size: 1.05rem; padding: 6px 14px; border-radius: 20px; color: var(--muted); background: color-mix(in srgb, currentColor 16%, transparent); }
+  .tip { color: var(--muted); margin-top: 8px; min-height: 2.9em; }
+  canvas { display: block; width: 100%; }
+  #meter { height: 64px; margin-top: 10px; }
+  #hist { height: 150px; margin-top: 8px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .tile { background: var(--tile); border-radius: 14px; padding: 12px 14px; min-width: 0; }
+  .tile b { display: block; font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 0.75rem; color: var(--muted); }
+  h2 { font-size: 0.98rem; font-weight: 650; margin: 0 0 8px; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; }
+  dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .note { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; max-width: 70ch; }
+  footer { color: var(--muted); font-size: 0.82rem; max-width: 70ch; }
+  [hidden] { display: none !important; }
+
+  body.pip { margin: 0; }
+  body.pip .hero { margin: 0; border: 0; border-radius: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+  body.pip .hero .big { font-size: 3.6rem; }
+  body.pip .tip { min-height: 0; font-size: 0.9rem; }
+  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+      <rect width="44" height="44" rx="11" fill="#0e1a21"/>
+      <g stroke-linecap="round" stroke-width="4.2">
+        <path d="M12 19v6" stroke="#2a9e6f"/><path d="M18 15v14" stroke="#3fd18f"/><path d="M24 10v24" stroke="#fff"/><path d="M30 16v12" stroke="#3fd18f"/><path d="M36 19v6" stroke="#2a9e6f"/>
+      </g>
+    </svg>
+    <div class="grow"><h1>Medidor de som</h1><small id="fonte">Entrada: aguardando</small></div>
+    <span class="chip" id="chip">● Parado</span>
+  </div>
+
+  <p id="erro" role="alert"></p>
+
+  <section class="panel controls" aria-label="Configurações">
+    <div><label for="dev">Entrada de áudio</label><select id="dev"><option value="">Padrão do sistema</option></select></div>
+    <div><label for="chan">Canal medido</label>
+      <select id="chan"><option value="auto">Automático (o mais forte)</option><option value="L">Esquerdo</option><option value="R">Direito</option></select></div>
+    <div><label for="speed">Velocidade do medidor</label>
+      <select id="speed"><option value="125">Rápido (125 ms)</option><option value="300" selected>Médio (300 ms)</option><option value="1000">Lento (1 s)</option></select></div>
+    <div><label for="cal">Calibração (dB)</label><input id="cal" type="number" step="0.5" value="0" inputmode="decimal"></div>
+  </section>
+
+  <div class="actions">
+    <button id="go" class="primary">Iniciar medição</button>
+    <button id="pipbtn">Abrir mini-janela flutuante</button>
+    <button id="reset">Zerar picos</button>
+  </div>
+
+  <div id="miniHome">
+    <section id="mini" class="panel hero" aria-label="Nível atual">
+      <div class="big"><span id="rms">--</span><small>dBFS</small></div>
+      <div class="legend">Nível médio (RMS)</div>
+      <div><span class="pill" id="pill" aria-live="polite">Parado</span></div>
+      <div class="tip" id="tip">Toque em “Iniciar medição” e permita o acesso ao microfone.</div>
+      <canvas id="meter" aria-hidden="true"></canvas>
+    </section>
+  </div>
+  <section class="panel" id="miniNote" hidden>
+    <strong>O medidor está na mini-janela.</strong> Ela fica por cima dos outros programas.
+    <p class="note">Para trazê-lo de volta, feche a mini-janela ou clique no botão “voltar à aba” dela.</p>
+  </section>
+
+  <div class="stats">
+    <div class="tile"><b id="peakHold">--</b><span>Pico recente (dBFS)</span></div>
+    <div class="tile"><b id="peakMax">--</b><span>Pico máximo (dBFS)</span></div>
+    <div class="tile"><b id="clips">0</b><span>Estouros (clipping)</span></div>
+    <div class="tile"><b id="lr">-- / --</b><span>Pico E / D (dBFS)</span></div>
+  </div>
+
+  <section class="panel" aria-label="Últimos 30 segundos">
+    <h2>Últimos 30 segundos</h2>
+    <canvas id="hist" aria-hidden="true"></canvas>
+    <p class="note">Linha verde: nível médio. Linha fina: pico. A faixa verde (−18 a −6 dBFS) é a região recomendada para o pico da voz.</p>
+  </section>
+
+  <section class="panel" aria-label="Detalhes da entrada">
+    <h2>Detalhes da entrada</h2>
+    <dl>
+      <dt>Cancelamento de eco</dt><dd id="s-echo">--</dd>
+      <dt>Redução de ruído</dt><dd id="s-ns">--</dd>
+      <dt>Ganho automático</dt><dd id="s-agc">--</dd>
+      <dt>Canais recebidos</dt><dd id="s-ch">--</dd>
+      <dt>Taxa de amostragem</dt><dd id="s-sr">--</dd>
+    </dl>
+    <p class="note" id="s-note">O medidor pede ao navegador que desligue o processamento de áudio. Se algum aparecer como “ligado”, a leitura pode estar sendo alterada por ele.</p>
+  </section>
+
+  <footer>
+    dBFS indica quanto do limite digital está em uso (0 é o máximo). Não é dB SPL. A leitura depende da placa de som, do cabo e do ganho de entrada do Windows. Use a calibração para alinhar com a mesa. Nada é gravado nem enviado.
+  </footer>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id) || (pip && pip.document.getElementById(id));
+  const TARGET = -12, HIST_MS = 30000;
+  let ctx = null, stream = null, anL = null, anR = null, bufL = null, bufR = null;
+  let running = false, pip = null;
+  let msS = [0, 0], lastNow = 0, lastHist = 0, hist = [];
+  let rmsDisp = -120, peakHold = -120, peakHoldT = 0, peakMax = -120, clips = 0, lastClip = -1e9;
+  let tickWorker = null, tickTimer = 0;
+  let C = {};
+
+  const db = v => (v < 1e-7 ? -120 : 20 * Math.log10(v));
+  const fmt = v => (v <= -119 ? "--" : v.toFixed(1).replace(".", ",").replace("-", "−"));
+  const safe = fn => { try { return fn(); } catch (e) { return null; } };
+
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    ["ok", "warn", "bad", "low", "ink", "muted", "line"].forEach(k => (C[k] = cs.getPropertyValue("--" + k).trim()));
+  }
+  readColors();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColors(); });
+
+  /* ---------- preferências ---------- */
+  function savePref(k, v) { safe(() => localStorage.setItem("medidor:" + k, v)); }
+  function loadPref(k) { return safe(() => localStorage.getItem("medidor:" + k)); }
+  ["chan", "speed", "cal"].forEach(k => { const v = loadPref(k); if (v !== null && v !== undefined) $(k).value = v; });
+  const cal = () => parseFloat($("cal").value.replace(",", ".")) || 0;
+  ["chan", "speed", "cal"].forEach(k => $(k).addEventListener("change", () => savePref(k, $(k).value)));
+
+  /* ---------- desenho ---------- */
+  function fit(c) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth, h = c.clientHeight;
+    if (!w || !h) return null;
+    if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    }
+    const g = c.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    return { g, w, h };
+  }
+  const alpha = (color, a) => `color-mix(in srgb, ${color} ${a}%, transparent)`;
+  const zone = d => (d < -18 ? C.low : d < -6 ? C.ok : d < -2 ? C.warn : C.bad);
+
+  function drawMeter(rms, peak) {
+    const f = fit($("meter")); if (!f) return;
+    const { g, w } = f, segs = 40, step = 60 / segs, gap = 2, top = 8, bh = 30;
+    const sw = (w - gap * (segs - 1)) / segs;
+    for (let i = 0; i < segs; i++) {
+      const mid = -60 + i * step + step / 2;
+      g.fillStyle = alpha(zone(mid), rms >= mid ? 100 : 18);
+      g.beginPath(); g.roundRect(i * (sw + gap), top, sw, bh, 3); g.fill();
+    }
+    if (peak > -59) {
+      const i = Math.min(segs - 1, Math.max(0, Math.floor((peak + 60) / step)));
+      g.fillStyle = C.ink;
+      g.beginPath(); g.roundRect(i * (sw + gap), top - 4, sw, bh + 8, 3); g.fill();
+    }
+    g.fillStyle = C.muted; g.font = "11px system-ui, sans-serif"; g.textBaseline = "alphabetic";
+    for (let d = -60; d <= 0; d += 10) {
+      const x = ((d + 60) / 60) * w;
+      g.textAlign = d === -60 ? "left" : d === 0 ? "right" : "center";
+      g.fillText(d === 0 ? "0" : String(d).replace("-", "−"), x, top + bh + 18);
+    }
+  }
+
+  function drawHist(now) {
+    const f = fit($("hist")); if (!f) return;
+    const { g, w, h } = f;
+    const y = d => h - ((Math.min(0, Math.max(-60, d)) + 60) / 60) * h;
+    g.fillStyle = alpha(C.ok, 14); g.fillRect(0, y(-6), w, y(-18) - y(-6));
+    g.font = "10px system-ui, sans-serif"; g.textAlign = "left";
+    [-60, -40, -20, 0].forEach(d => {
+      const yy = Math.min(h - 0.5, Math.max(0.5, y(d)));
+      g.fillStyle = C.line; g.fillRect(0, yy, w, 1);
+      g.fillStyle = C.muted; g.fillText((d === 0 ? "0" : String(d).replace("-", "−")) + " dB", 4, d === 0 ? yy + 11 : yy - 3);
+    });
+    if (hist.length < 2) return;
+    const x0 = now - HIST_MS, X = p => ((p.t - x0) / HIST_MS) * w;
+    const trace = key => { g.beginPath(); hist.forEach((p, i) => (i ? g.lineTo(X(p), y(p[key])) : g.moveTo(X(p), y(p[key])))); };
+    trace("peak"); g.lineWidth = 1; g.strokeStyle = alpha(C.ink, 45); g.stroke();
+    trace("rms");
+    const grad = g.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, alpha(C.ok, 45)); grad.addColorStop(1, alpha(C.ok, 0));
+    g.save(); g.lineTo(X(hist[hist.length - 1]), h); g.lineTo(X(hist[0]), h); g.closePath(); g.fillStyle = grad; g.fill(); g.restore();
+    trace("rms"); g.lineWidth = 2.5; g.lineJoin = "round"; g.strokeStyle = C.ok; g.stroke();
+  }
+
+  /* ---------- status ---------- */
+  function recentPeak(now) {
+    let m = -120;
+    for (let i = hist.length - 1; i >= 0 && now - hist[i].t <= 3000; i--) if (hist[i].peak > m) m = hist[i].peak;
+    return m;
+  }
+  function status(now) {
+    if (!running) return { s: "Parado", t: "Toque em “Iniciar medição” e permita o acesso ao microfone.", c: "muted" };
+    if (now - lastClip < 3000) return { s: "Clipping: o sinal estourou", t: "Reduza o ganho ou o volume de entrada em pelo menos 6 dB.", c: "bad" };
+    const r = recentPeak(now);
+    if (r < -55) return { s: "Sem sinal", t: "Fale ou toque o som que você quer medir.", c: "muted" };
+    const diff = Math.round(TARGET - r);
+    if (r > -6) return { s: "Alto demais", t: `Reduza cerca de ${Math.abs(diff)} dB para ter margem contra distorção.`, c: "warn" };
+    if (r >= -18) return { s: "Nível bom", t: "Mantenha o ajuste atual.", c: "ok" };
+    return { s: "Baixo", t: `Aumente cerca de ${diff} dB no ganho ou no volume de entrada.`, c: "low" };
+  }
+
+  function setChip() {
+    let t = "Parado", c = "muted";
+    if (running) { t = "Medindo"; c = "ok"; }
+    $("chip").textContent = "● " + t; $("chip").style.color = `var(--${c})`;
+  }
+
+  /* ---------- análise por quadro ---------- */
+  function chanStats(an, buf) {
+    an.getFloatTimeDomainData(buf);
+    let s = 0, s2 = 0, mx = -1, mn = 1, raw = 0;
+    const n = buf.length;
+    for (let i = 0; i < n; i++) {
+      const v = buf[i]; s += v; s2 += v * v;
+      if (v > mx) mx = v; if (v < mn) mn = v;
+      const a = v < 0 ? -v : v; if (a > raw) raw = a;
+    }
+    const mean = s / n;                         // remove componente contínua (DC)
+    return { ms: Math.max(0, s2 / n - mean * mean), pk: Math.max(mx - mean, mean - mn), raw };
+  }
+
+  function frame() {
+    if (!running) return;
+    try { frameInner(); } catch (e) { showError("Erro na leitura: " + e.message); }
+  }
+
+  function frameInner() {
+    if (ctx && ctx.state === "suspended") safe(() => ctx.resume());
+    const now = performance.now();
+    const dt = lastNow ? now - lastNow : 50; lastNow = now;
+    const tau = parseFloat($("speed").value) || 300;
+    const a = 1 - Math.exp(-dt / tau);
+    const st = [chanStats(anL, bufL), chanStats(anR, bufR)];
+    const off = cal();
+    const rms = [0, 0], pk = [0, 0];
+    for (let c = 0; c < 2; c++) {
+      msS[c] += (st[c].ms - msS[c]) * a;
+      const r = db(Math.sqrt(msS[c])), p = db(st[c].pk);
+      rms[c] = r <= -119 ? -120 : r + off; pk[c] = p <= -119 ? -120 : p + off;
+    }
+    const mode = $("chan").value;
+    const idx = mode === "L" ? 0 : mode === "R" ? 1 : (pk[0] >= pk[1] ? 0 : 1);
+    const rmsSel = mode === "auto" ? Math.max(rms[0], rms[1]) : rms[idx];
+    const pkSel = mode === "auto" ? Math.max(pk[0], pk[1]) : pk[idx];
+    const rawSel = mode === "auto" ? Math.max(st[0].raw, st[1].raw) : st[idx].raw;
+
+    rmsDisp = rmsSel;
+    if (pkSel >= peakHold) { peakHold = pkSel; peakHoldT = now; }
+    else if (now - peakHoldT > 1500) peakHold = Math.max(pkSel, peakHold - 0.8);
+    if (pkSel > peakMax) peakMax = pkSel;
+    if (rawSel >= 0.999) { if (now - lastClip > 300) clips++; lastClip = now; }
+    if (now - lastHist >= 50) {
+      lastHist = now; hist.push({ t: now, rms: rmsSel, peak: pkSel });
+      while (hist.length && now - hist[0].t > HIST_MS) hist.shift();
+    }
+
+    const s = status(now);
+    $("rms").textContent = fmt(rmsDisp);
+    $("peakHold").textContent = fmt(peakHold);
+    $("peakMax").textContent = fmt(peakMax);
+    $("clips").textContent = clips;
+    $("lr").textContent = fmt(pk[0]) + " / " + fmt(pk[1]);
+    $("pill").textContent = s.s; $("pill").style.color = `var(--${s.c})`;
+    $("tip").textContent = s.t;
+    drawMeter(rmsDisp, peakHold);
+    drawHist(now);
+  }
+
+  /* Relógio de 20 quadros por segundo. Fica num Web Worker porque o navegador
+     pausa o redesenho (requestAnimationFrame) de janelas em segundo plano. */
+  function startTicker() {
+    stopTicker();
+    try {
+      const url = URL.createObjectURL(new Blob(["setInterval(function(){postMessage(0)},50)"], { type: "text/javascript" }));
+      tickWorker = new Worker(url);
+      tickWorker.onmessage = () => frame();
+      tickWorker.onerror = () => { stopTicker(); tickTimer = setInterval(frame, 50); };
+    } catch (e) {
+      tickTimer = setInterval(frame, 50);
+    }
+  }
+  function stopTicker() {
+    if (tickWorker) { tickWorker.terminate(); tickWorker = null; }
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = 0; }
+  }
+  function restartLoop() {
+    if (running) { if (!tickWorker && !tickTimer) startTicker(); }
+    else stopTicker();
+  }
+
+  /* ---------- áudio ---------- */
+  const showError = m => ($("erro").textContent = m || "");
+  const onoff = v => (v === true ? "ligado" : v === false ? "desligado" : "indisponível");
+
+  async function listDevices(selected) {
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const mics = all.filter(d => d.kind === "audioinput" && d.deviceId !== "default" && d.deviceId !== "communications");
+      const sel = $("dev");
+      sel.innerHTML = ""; sel.add(new Option("Padrão do sistema", ""));
+      mics.forEach((d, i) => sel.add(new Option(d.label || "Entrada " + (i + 1), d.deviceId)));
+      sel.value = mics.some(d => d.deviceId === selected) ? selected : "";
+    } catch (e) { /* lista opcional */ }
+  }
+
+  async function start() {
+    showError("");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showError("Este navegador não libera o microfone nesta página. Abra com https:// (o GitHub Pages já usa)."); return;
+    }
+    stop(true);
+    try {
+      const audio = { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 2 } };
+      if ($("dev").value) audio.deviceId = { exact: $("dev").value };
+      stream = await navigator.mediaDevices.getUserMedia({ audio });
+    } catch (e) {
+      const map = {
+        NotAllowedError: "Acesso ao microfone negado. Libere a permissão no navegador e no Windows (Privacidade > Microfone).",
+        NotFoundError: "Nenhuma entrada de áudio encontrada.",
+        NotReadableError: "A entrada está em uso por outro programa.",
+        OverconstrainedError: "A entrada escolhida não está disponível. Selecione outra."
+      };
+      showError(map[e.name] || "Não foi possível abrir a entrada: " + e.message); return;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC(); await ctx.resume();
+    const src = ctx.createMediaStreamSource(stream);
+    const split = ctx.createChannelSplitter(2);
+    anL = ctx.createAnalyser(); anR = ctx.createAnalyser();
+    anL.fftSize = anR.fftSize = 2048;
+    bufL = new Float32Array(anL.fftSize); bufR = new Float32Array(anR.fftSize);
+    src.connect(split); split.connect(anL, 0); split.connect(anR, 1); // sem saída para o alto-falante
+
+    const track = stream.getAudioTracks()[0], s = track.getSettings ? track.getSettings() : {};
+    await listDevices(s.deviceId || $("dev").value);
+    $("fonte").textContent = "Entrada: " + (track.label || "microfone");
+    $("s-echo").textContent = onoff(s.echoCancellation); $("s-ns").textContent = onoff(s.noiseSuppression);
+    $("s-agc").textContent = onoff(s.autoGainControl);
+    $("s-ch").textContent = s.channelCount || "--";
+    $("s-sr").textContent = (s.sampleRate || ctx.sampleRate) + " Hz";
+    $("s-note").textContent = (s.echoCancellation || s.noiseSuppression || s.autoGainControl)
+      ? "O navegador manteve algum processamento ligado. A leitura pode ser alterada por ele. Desligue os efeitos da entrada nas configurações de som do Windows."
+      : "O medidor pede ao navegador que desligue o processamento de áudio. Se algum aparecer como “ligado”, a leitura pode estar sendo alterada por ele.";
+    track.addEventListener("ended", () => { showError("A entrada de áudio foi desconectada."); stop(); });
+
+    msS = [0, 0]; lastNow = 0; hist = []; rmsDisp = -120; peakHold = -120;
+    running = true; $("go").textContent = "Parar"; setChip();
+    restartLoop();
+  }
+
+  function stop(silent) {
+    running = false; restartLoop();
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (ctx) ctx.close();
+    stream = ctx = anL = anR = null;
+    $("go").textContent = "Iniciar medição"; setChip();
+    if (!silent) {
+      const s = status(performance.now());
+      $("pill").textContent = s.s; $("pill").style.color = `var(--${s.c})`; $("tip").textContent = s.t; $("rms").textContent = "--";
+      drawMeter(-120, -120);
+    }
+  }
+
+  function resetPeaks() {
+    peakMax = -120; peakHold = -120; clips = 0; lastClip = -1e9; hist = [];
+    $("peakMax").textContent = "--"; $("peakHold").textContent = "--"; $("clips").textContent = "0"; $("lr").textContent = "-- / --";
+  }
+
+  /* ---------- mini-janela flutuante ---------- */
+  async function openMini() {
+    if (!("documentPictureInPicture" in window)) {
+      showError("A mini-janela flutuante precisa do Chrome ou do Edge (versão 116 ou mais nova)."); return;
+    }
+    if (pip) { pip.focus(); return; }
+    try {
+      pip = await documentPictureInPicture.requestWindow({ width: 400, height: 300 });
+    } catch (e) { showError("Não foi possível abrir a mini-janela: " + e.message); return; }
+    [...document.styleSheets].forEach(ss => {
+      try {
+        const css = [...ss.cssRules].map(r => r.cssText).join("");
+        const st = pip.document.createElement("style"); st.textContent = css; pip.document.head.appendChild(st);
+      } catch (e) { /* ignora folhas externas */ }
+    });
+    pip.document.title = "Medidor de som";
+    pip.document.body.classList.add("pip");
+    pip.document.body.append($("mini"));
+    $("miniNote").hidden = false;
+    pip.addEventListener("pagehide", () => {
+      $("miniHome").append($("mini")); $("miniNote").hidden = true; pip = null; restartLoop();
+    });
+    restartLoop();
+  }
+
+  $("go").addEventListener("click", () => (running ? stop() : start()));
+  $("reset").addEventListener("click", resetPeaks);
+  $("pipbtn").addEventListener("click", openMini);
+  $("dev").addEventListener("change", () => { if (running) start(); });
+  if (!("documentPictureInPicture" in window)) {
+    $("pipbtn").title = "Disponível no Chrome e no Edge 116 ou mais novos";
+  }
+  window.addEventListener("resize", () => { if (!running) { drawMeter(-120, -120); drawHist(performance.now()); } });
+  setChip(); drawMeter(-120, -120); drawHist(performance.now());
+
+  // Permite instalar a página como aplicativo e abri-la mesmo sem internet.
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>

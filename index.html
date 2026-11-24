@@ -62,6 +62,7 @@
   /* ---------- painel principal ---------- */
   .hero {
     --st: var(--muted);
+    position: relative;
     background: linear-gradient(180deg, color-mix(in srgb, var(--st) 13%, var(--card)), var(--card) 64%);
     border: 1px solid color-mix(in srgb, var(--st) 42%, var(--line));
     border-radius: var(--radius); padding: 22px 24px 18px; box-shadow: var(--shadow);
@@ -130,6 +131,42 @@
   body.pip .adj b { font-size: 1.6rem; }
   body.pip .tip { min-height: 0; font-size: 0.9rem; }
   body.pip .zones { display: none; }
+
+  /* ---------- alerta de estouro (sem som) ---------- */
+  .hero.alarm { border-color: var(--bad); animation: alarm 0.6s steps(1, end) infinite; }
+  .hero.alarm .big { color: var(--bad); }
+  .hero.alarm .pill { color: var(--ink) !important; background: color-mix(in srgb, var(--bad) 40%, transparent); }
+  .hero.alarm.still { animation: none; background: color-mix(in srgb, var(--bad) 42%, var(--card)); }
+  @keyframes alarm {
+    0% { background: color-mix(in srgb, var(--bad) 58%, var(--card)); }
+    50% { background: color-mix(in srgb, var(--bad) 14%, var(--card)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero.alarm { animation: none; background: color-mix(in srgb, var(--bad) 42%, var(--card)); }
+  }
+  .chk { display: flex; gap: 8px; align-items: center; font-size: 0.95rem; color: var(--ink); margin: 8px 0 0; }
+  .chk input { width: 18px; height: 18px; }
+
+  /* ---------- botão e modo barra fina (só na mini-janela) ---------- */
+  .slimbtn { display: none; position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; padding: 0; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--card) 70%, transparent); color: var(--muted); cursor: pointer; }
+  .slimbtn svg { width: 18px; height: 18px; fill: currentColor; }
+  .slimbtn:hover { color: var(--ink); }
+  body.pip .slimbtn { display: flex; }
+  .hero .ic-full { display: none; }
+  .hero.slim .ic-slim { display: none; }
+  .hero.slim .ic-full { display: block; }
+
+  body.pip .hero.slim { flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; padding: 8px 14px 8px 16px; }
+  .hero.slim .hero-top { display: contents; }
+  .hero.slim .hero-top > div:first-child { order: 1; flex: none; }
+  .hero.slim .big { font-size: 2.3rem; }
+  .hero.slim .big small { font-size: 0.8rem; margin-left: 4px; }
+  .hero.slim .legend, .hero.slim .pillwrap, .hero.slim .tip, .hero.slim .zones { display: none; }
+  .hero.slim #meter { order: 2; flex: 1 1 0; width: 0; min-width: 90px; height: 48px; margin: 0; }
+  .hero.slim .adj { order: 3; min-width: 84px; }
+  .hero.slim .adj b { font-size: 1.35rem; }
+  .hero.slim .adj span { display: none; }
+  .hero.slim .slimbtn { order: 4; position: static; flex: none; }
 </style>
 </head>
 <body>
@@ -157,6 +194,10 @@
   <div class="col">
     <div id="miniHome">
       <section id="mini" class="hero" aria-label="Nível atual">
+        <button class="slimbtn" id="slimBtn" type="button" title="Barra fina" aria-label="Alternar entre mini-janela normal e barra fina">
+          <svg class="ic-slim" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10h18v4H3z"/></svg>
+          <svg class="ic-full" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M3 5h18v14H3V5zm2 2v10h14V7H5z"/></svg>
+        </button>
         <div class="hero-top">
           <div>
             <div class="big"><span id="rms">--</span><small>dBFS</small></div>
@@ -164,7 +205,7 @@
           </div>
           <div class="adj" id="adj" hidden><b>--</b><span></span></div>
         </div>
-        <div><span class="pill" id="pill" aria-live="polite">Parado</span></div>
+        <div class="pillwrap"><span class="pill" id="pill" aria-live="polite">Parado</span></div>
         <div class="tip" id="tip">Escolha a entrada e toque em “Iniciar medição”.</div>
         <canvas id="meter" aria-hidden="true"></canvas>
         <ul class="zones" aria-label="Legenda das cores">
@@ -220,6 +261,11 @@
           <label for="cal">Calibração (dB)</label>
           <input id="cal" type="number" step="0.5" value="0" inputmode="decimal">
           <div class="help-text">Soma um valor fixo à leitura.</div>
+        </div>
+        <div>
+          <label for="flash">Alerta de estouro</label>
+          <label class="chk"><input type="checkbox" id="flash" checked> Piscar a tela ao estourar</label>
+          <div class="help-text">Sem som. Desligado, a tela só fica vermelha, sem piscar.</div>
         </div>
       </div>
     </details>
@@ -297,8 +343,11 @@
   const loadPref = k => safe(() => localStorage.getItem("medidor:" + k));
   ["chan", "speed", "cal"].forEach(k => { const v = loadPref(k); if (v !== null && v !== undefined) $(k).value = v; });
   if (loadPref("helpSeen")) $("help").open = false;
+  { const fp = loadPref("flash"); if (fp !== null && fp !== undefined) $("flash").checked = fp === "1"; }
+  const flashOn = () => $("flash").checked;
   const cal = () => parseFloat($("cal").value.replace(",", ".")) || 0;
   ["chan", "speed", "cal"].forEach(k => $(k).addEventListener("change", () => savePref(k, $(k).value)));
+  $("flash").addEventListener("change", () => savePref("flash", $("flash").checked ? "1" : "0"));
 
   /* ---------- desenho ---------- */
   function fit(c) {
@@ -318,7 +367,8 @@
 
   function drawMeter(rms, peak) {
     const f = fit($("meter")); if (!f) return;
-    const { g, w } = f, segs = 40, step = 60 / segs, gap = 2, top = 8, bh = 34;
+    const { g, w, h } = f, slim = $("mini").classList.contains("slim");
+    const segs = 40, step = 60 / segs, gap = 2, top = slim ? 4 : 8, bh = slim ? Math.max(12, h - 8) : 34, pad = slim ? 2 : 4;
     const sw = (w - gap * (segs - 1)) / segs;
     for (let i = 0; i < segs; i++) {
       const mid = -60 + i * step + step / 2;
@@ -328,8 +378,9 @@
     if (peak > -59) {
       const i = Math.min(segs - 1, Math.max(0, Math.floor((peak + 60) / step)));
       g.fillStyle = C.ink;
-      g.beginPath(); g.roundRect(i * (sw + gap), top - 4, sw, bh + 8, 3); g.fill();
+      g.beginPath(); g.roundRect(i * (sw + gap), top - pad, sw, bh + 2 * pad, 3); g.fill();
     }
+    if (slim) return;
     g.fillStyle = C.muted; g.font = "11px system-ui, sans-serif"; g.textBaseline = "alphabetic";
     for (let d = -60; d <= 0; d += 10) {
       const x = ((d + 60) / 60) * w;
@@ -382,6 +433,12 @@
     pill.textContent = s.s; pill.style.color = `var(--${s.c})`;
     $("tip").textContent = s.t;
     mini.style.setProperty("--st", `var(--${s.c})`);
+    const alarm = s.c === "bad";
+    mini.classList.toggle("alarm", alarm);
+    mini.classList.toggle("still", !flashOn());
+    const title = alarm ? "⚠ ESTOURO · Medidor de som" : "Medidor de som";
+    if (document.title !== title) document.title = title;
+    if (pip && pip.document.title !== title) pip.document.title = title;
     adj.hidden = !s.a;
     if (s.a) {
       adj.firstElementChild.textContent = s.a;
@@ -571,13 +628,31 @@
   }
 
   /* ---------- mini-janela flutuante ---------- */
+  const NORMAL = [420, 360], SLIM = [560, 100];
+
+  function updateSlim() {
+    if (!pip) return;
+    const s = pip.innerHeight < 190;
+    $("mini").classList.toggle("slim", s);
+    $("slimBtn").title = s ? "Voltar ao tamanho normal" : "Barra fina";
+    savePref("slim", s ? "1" : "0");
+    if (!running) drawMeter(-120, -120);
+  }
+  function toggleSlim() {
+    if (!pip) return;
+    const t = pip.innerHeight < 190 ? NORMAL : SLIM;
+    try { pip.resizeTo(t[0], t[1]); } catch (e) { /* se não puder, é só arrastar a borda da janela */ }
+    setTimeout(updateSlim, 200);
+  }
+
   async function openMini() {
     if (!("documentPictureInPicture" in window)) {
       showError("A mini-janela flutuante precisa do Chrome ou do Edge (versão 116 ou mais nova)."); return;
     }
     if (pip) { pip.focus(); return; }
     try {
-      pip = await documentPictureInPicture.requestWindow({ width: 420, height: 360 });
+      const sz = loadPref("slim") === "1" ? SLIM : NORMAL;
+      pip = await documentPictureInPicture.requestWindow({ width: sz[0], height: sz[1] });
     } catch (e) { showError("Não foi possível abrir a mini-janela: " + e.message); return; }
     [...document.styleSheets].forEach(ss => {
       try {
@@ -590,8 +665,10 @@
     pip.document.body.append($("mini"));
     $("miniNote").hidden = false;
     pip.addEventListener("keydown", onKey);
+    pip.addEventListener("resize", updateSlim);
+    updateSlim();
     pip.addEventListener("pagehide", () => {
-      $("miniHome").append($("mini")); $("miniNote").hidden = true; pip = null; restartLoop();
+      $("miniHome").append($("mini")); $("mini").classList.remove("slim"); $("miniNote").hidden = true; pip = null; restartLoop();
     });
     restartLoop();
   }
@@ -611,6 +688,7 @@
   $("reset").addEventListener("click", resetPeaks);
   $("pipbtn").addEventListener("click", openMini);
   $("erroX").addEventListener("click", () => showError(""));
+  $("slimBtn").addEventListener("click", toggleSlim);
   $("dev").addEventListener("change", () => { if (running) start(); });
   if (!("documentPictureInPicture" in window)) {
     $("pipbtn").title = "Disponível no Chrome e no Edge 116 ou mais novos";

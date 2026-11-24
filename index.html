@@ -12,144 +12,270 @@
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #edf1f4; --card: #ffffff; --tile: #e3e9ee; --ink: #192127; --muted: #5a6873; --line: #d3dbe1;
+    --bg: #edf1f4; --card: #ffffff; --tile: #e6ecf0; --ink: #172026; --muted: #5a6873; --line: #d5dde3;
     --ok: #168a58; --warn: #c27a00; --bad: #d3342b; --low: #2f6fa8;
-    --btn: #192127; --btn-ink: #ffffff;
+    --btn: #172026; --btn-ink: #ffffff;
+    --shadow: 0 8px 28px rgba(20, 40, 60, 0.07);
+    --radius: 22px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #0f1317; --card: #182027; --tile: #1f2a33; --ink: #e8eef2; --muted: #8c9ba6; --line: #2b3741;
       --ok: #3fd18f; --warn: #f2aa38; --bad: #ff5e53; --low: #6fa8dc;
       --btn: #e8eef2; --btn-ink: #0f1317;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.45; }
-  main { max-width: 860px; margin: 0 auto; padding: 22px 18px 48px; }
-  .top { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-  .top h1 { font-size: 1.35rem; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
-  .top small { display: block; color: var(--muted); font-size: 0.8rem; }
-  .top .grow { flex: 1; min-width: 0; }
-  .chip { font-size: 0.8rem; font-weight: 600; padding: 6px 12px; border-radius: 20px; color: var(--muted); background: color-mix(in srgb, currentColor 14%, transparent); white-space: nowrap; }
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 20px; margin-bottom: 14px; }
-  #erro { color: var(--bad); font-weight: 500; margin: 0 0 12px; }
-  #erro:empty { display: none; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.45;
+    background: radial-gradient(900px 420px at 15% -8%, color-mix(in srgb, var(--ok) 11%, transparent), transparent 70%), var(--bg);
+  }
 
-  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: end; }
-  label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
-  select, input[type=number] { width: 100%; font: inherit; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
-  button { font: inherit; border-radius: 12px; border: 1px solid var(--line); padding: 11px 16px; background: var(--card); color: var(--ink); cursor: pointer; font-weight: 600; }
-  button.primary { background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
-  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--ok); outline-offset: 2px; }
-  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  /* ---------- barra superior ---------- */
+  .bar { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 84%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+  .bar-in { max-width: 1080px; margin: 0 auto; padding: 12px 18px; display: flex; align-items: center; gap: 12px; }
+  .bar h1 { font-size: 1.15rem; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .bar small { display: block; color: var(--muted); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .grow { flex: 1; min-width: 0; }
+  .chip { display: inline-flex; align-items: center; font-size: 0.8rem; font-weight: 650; padding: 6px 12px; border-radius: 20px; color: var(--muted); background: color-mix(in srgb, currentColor 14%, transparent); white-space: nowrap; }
+  .chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 8px; }
+  .chip[data-state="run"]::before { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.25; } }
+  @media (prefers-reduced-motion: reduce) { .chip::before { animation: none !important; } * { transition: none !important; } }
 
-  .hero .big { font-size: clamp(3.6rem, 13vw, 5.4rem); font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
-  .hero .big small { font-size: 1.05rem; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 6px; }
-  .legend { color: var(--muted); font-size: 0.85rem; }
-  .pill { display: inline-block; margin-top: 12px; font-weight: 650; font-size: 1.05rem; padding: 6px 14px; border-radius: 20px; color: var(--muted); background: color-mix(in srgb, currentColor 16%, transparent); }
+  /* ---------- estrutura ---------- */
+  .layout { max-width: 1080px; margin: 0 auto; padding: 18px 18px 56px; display: grid; gap: 16px; align-items: start; }
+  @media (min-width: 920px) { .layout { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); } .alert { grid-column: 1 / -1; } }
+  .col { display: grid; gap: 14px; min-width: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
+  h2 { font-size: 0.98rem; font-weight: 650; margin: 0 0 10px; }
+  .note { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; }
+
+  .alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; color: var(--bad); border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--card)); font-weight: 500; }
+  .alert svg { width: 22px; height: 22px; fill: currentColor; flex: none; margin-top: 1px; }
+  .alert span { flex: 1; color: var(--ink); }
+  .alert button { border: 0; background: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
+
+  /* ---------- painel principal ---------- */
+  .hero {
+    --st: var(--muted);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--st) 13%, var(--card)), var(--card) 64%);
+    border: 1px solid color-mix(in srgb, var(--st) 42%, var(--line));
+    border-radius: var(--radius); padding: 22px 24px 18px; box-shadow: var(--shadow);
+    transition: border-color 0.25s, background 0.25s;
+  }
+  .hero-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+  .big { font-size: clamp(3.8rem, 12vw, 5.6rem); font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .big small { font-size: 1.05rem; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 6px; }
+  .legend { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+  .adj { text-align: right; min-width: 120px; }
+  .adj b { display: block; font-size: 2.1rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .adj span { font-size: 0.8rem; color: var(--muted); }
+  .pill { display: inline-block; margin-top: 14px; font-weight: 650; font-size: 1.05rem; padding: 6px 14px; border-radius: 20px; color: var(--muted); background: color-mix(in srgb, currentColor 16%, transparent); }
   .tip { color: var(--muted); margin-top: 8px; min-height: 2.9em; }
   canvas { display: block; width: 100%; }
-  #meter { height: 64px; margin-top: 10px; }
-  #hist { height: 150px; margin-top: 8px; }
+  #meter { height: 76px; margin-top: 8px; }
+  .zones { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; padding: 0; margin: 4px 0 0; font-size: 0.78rem; color: var(--muted); }
+  .zones li::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px; background: var(--c); vertical-align: -1px; }
 
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-  .tile { background: var(--tile); border-radius: 14px; padding: 12px 14px; min-width: 0; }
-  .tile b { display: block; font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .tile span { font-size: 0.75rem; color: var(--muted); }
-  h2 { font-size: 0.98rem; font-weight: 650; margin: 0 0 8px; }
+  /* ---------- botões ---------- */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 20px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-weight: 650; cursor: pointer; flex: 1 1 150px; transition: transform 0.08s, background 0.15s; }
+  .btn:hover { background: color-mix(in srgb, var(--ink) 6%, var(--card)); }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary { flex: 2 1 220px; background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
+  .btn.primary:hover { background: color-mix(in srgb, var(--btn) 88%, var(--ok)); }
+  .btn svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
+  #go .ic-pause { display: none; }
+  #go.running .ic-play { display: none; }
+  #go.running .ic-pause { display: block; }
+  .btn:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--ok); outline-offset: 2px; }
+
+  /* ---------- formulários ---------- */
+  label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
+  select, input[type=number] { width: 100%; font: inherit; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  .field-big select { font-size: 1.02rem; padding: 13px 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-top: 12px; }
+  .help-text { font-size: 0.76rem; color: var(--muted); margin-top: 4px; }
+
+  details > summary { cursor: pointer; font-weight: 650; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::after { content: "▾"; color: var(--muted); transition: transform 0.15s; }
+  details[open] > summary::after { transform: rotate(180deg); }
+  details[open] > summary { margin-bottom: 12px; }
+
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 10px; }
+  ol.steps li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+  ol.steps li::before { content: counter(s); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 0.85rem; color: var(--btn-ink); background: var(--btn); }
+  .warnbox { margin-top: 12px; padding: 10px 12px; border-radius: 12px; font-size: 0.86rem; background: color-mix(in srgb, var(--warn) 12%, var(--card)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); }
+
+  /* ---------- números e gráfico ---------- */
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .tile { background: var(--tile); border-radius: 16px; padding: 12px 14px; min-width: 0; }
+  .tile b { display: block; font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 0.76rem; color: var(--muted); }
+  #hist { height: 170px; }
   dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; }
   dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; }
-  .note { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; max-width: 70ch; }
-  footer { color: var(--muted); font-size: 0.82rem; max-width: 70ch; }
-  [hidden] { display: none !important; }
+  footer { color: var(--muted); font-size: 0.8rem; max-width: 80ch; grid-column: 1 / -1; }
+  kbd { font: inherit; font-size: 0.78rem; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--tile); }
 
-  body.pip { margin: 0; }
-  body.pip .hero { margin: 0; border: 0; border-radius: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
-  body.pip .hero .big { font-size: 3.6rem; }
+  /* ---------- mini-janela ---------- */
+  body.pip { background: var(--card); }
+  body.pip .hero { margin: 0; border: 0; border-radius: 0; box-shadow: none; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 16px 18px; }
+  body.pip .big { font-size: 3.6rem; }
+  body.pip .adj b { font-size: 1.6rem; }
   body.pip .tip { min-height: 0; font-size: 0.9rem; }
-  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  body.pip .zones { display: none; }
 </style>
 </head>
 <body>
-<main>
-  <div class="top">
-    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+<header class="bar">
+  <div class="bar-in">
+    <svg width="40" height="40" viewBox="0 0 44 44" aria-hidden="true">
       <rect width="44" height="44" rx="11" fill="#0e1a21"/>
       <g stroke-linecap="round" stroke-width="4.2">
         <path d="M12 19v6" stroke="#2a9e6f"/><path d="M18 15v14" stroke="#3fd18f"/><path d="M24 10v24" stroke="#fff"/><path d="M30 16v12" stroke="#3fd18f"/><path d="M36 19v6" stroke="#2a9e6f"/>
       </g>
     </svg>
     <div class="grow"><h1>Medidor de som</h1><small id="fonte">Entrada: aguardando</small></div>
-    <span class="chip" id="chip">● Parado</span>
+    <span class="chip" id="chip" data-state="stop">Parado</span>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="alert" id="erroBox" role="alert" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+    <span id="erro"></span>
+    <button id="erroX" aria-label="Fechar aviso">✕</button>
   </div>
 
-  <p id="erro" role="alert"></p>
+  <!-- coluna principal -->
+  <div class="col">
+    <div id="miniHome">
+      <section id="mini" class="hero" aria-label="Nível atual">
+        <div class="hero-top">
+          <div>
+            <div class="big"><span id="rms">--</span><small>dBFS</small></div>
+            <div class="legend">Nível médio (RMS)</div>
+          </div>
+          <div class="adj" id="adj" hidden><b>--</b><span></span></div>
+        </div>
+        <div><span class="pill" id="pill" aria-live="polite">Parado</span></div>
+        <div class="tip" id="tip">Escolha a entrada e toque em “Iniciar medição”.</div>
+        <canvas id="meter" aria-hidden="true"></canvas>
+        <ul class="zones" aria-label="Legenda das cores">
+          <li style="--c: var(--low)">Baixo</li>
+          <li style="--c: var(--ok)">Ideal (−18 a −6)</li>
+          <li style="--c: var(--warn)">Alto</li>
+          <li style="--c: var(--bad)">Estouro</li>
+        </ul>
+      </section>
+    </div>
 
-  <section class="panel controls" aria-label="Configurações">
-    <div><label for="dev">Entrada de áudio</label><select id="dev"><option value="">Padrão do sistema</option></select></div>
-    <div><label for="chan">Canal medido</label>
-      <select id="chan"><option value="auto">Automático (o mais forte)</option><option value="L">Esquerdo</option><option value="R">Direito</option></select></div>
-    <div><label for="speed">Velocidade do medidor</label>
-      <select id="speed"><option value="125">Rápido (125 ms)</option><option value="300" selected>Médio (300 ms)</option><option value="1000">Lento (1 s)</option></select></div>
-    <div><label for="cal">Calibração (dB)</label><input id="cal" type="number" step="0.5" value="0" inputmode="decimal"></div>
-  </section>
-
-  <div class="actions">
-    <button id="go" class="primary">Iniciar medição</button>
-    <button id="pipbtn">Abrir mini-janela flutuante</button>
-    <button id="reset">Zerar picos</button>
-  </div>
-
-  <div id="miniHome">
-    <section id="mini" class="panel hero" aria-label="Nível atual">
-      <div class="big"><span id="rms">--</span><small>dBFS</small></div>
-      <div class="legend">Nível médio (RMS)</div>
-      <div><span class="pill" id="pill" aria-live="polite">Parado</span></div>
-      <div class="tip" id="tip">Toque em “Iniciar medição” e permita o acesso ao microfone.</div>
-      <canvas id="meter" aria-hidden="true"></canvas>
+    <section class="card" id="miniNote" hidden>
+      <strong>O medidor está na mini-janela.</strong> Ela fica por cima dos outros programas.
+      <p class="note">Agora você pode <strong>minimizar</strong> esta janela (botão “−” ou Win + ↓). Não a feche: a mini-janela fecha junto com ela. Para trazer o medidor de volta, feche a mini-janela ou use o botão de voltar dela.</p>
     </section>
+
+    <div class="toolbar">
+      <button class="btn primary" id="go" aria-keyshortcuts="Space">
+        <svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="ic-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        <span id="goLabel">Iniciar medição</span>
+      </button>
+      <button class="btn" id="pipbtn" aria-keyshortcuts="P">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98V5c0-1.1-.9-2-2-2zm0 16.01H3V4.98h18v14.03z"/></svg>
+        Mini-janela
+      </button>
+      <button class="btn" id="reset" aria-keyshortcuts="R">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        Zerar picos
+      </button>
+    </div>
+
+    <section class="card field-big" aria-label="Entrada de áudio">
+      <label for="dev">Entrada de áudio</label>
+      <select id="dev"><option value="">Padrão do sistema</option></select>
+      <p class="help-text">Escolha o adaptador ou a interface ligada à mesa. A lista aparece completa depois da primeira medição.</p>
+    </section>
+
+    <details class="card">
+      <summary>Ajustes de medição</summary>
+      <div class="grid3" style="margin-top:0">
+        <div>
+          <label for="chan">Canal medido</label>
+          <select id="chan"><option value="auto">Automático</option><option value="L">Esquerdo</option><option value="R">Direito</option></select>
+          <div class="help-text">Automático usa o canal com mais sinal.</div>
+        </div>
+        <div>
+          <label for="speed">Velocidade</label>
+          <select id="speed"><option value="125">Rápido (125 ms)</option><option value="300" selected>Médio (300 ms)</option><option value="1000">Lento (1 s)</option></select>
+          <div class="help-text">Rápido mostra picos; lento mostra a média.</div>
+        </div>
+        <div>
+          <label for="cal">Calibração (dB)</label>
+          <input id="cal" type="number" step="0.5" value="0" inputmode="decimal">
+          <div class="help-text">Soma um valor fixo à leitura.</div>
+        </div>
+      </div>
+    </details>
   </div>
-  <section class="panel" id="miniNote" hidden>
-    <strong>O medidor está na mini-janela.</strong> Ela fica por cima dos outros programas.
-    <p class="note">Agora você pode <strong>minimizar</strong> esta janela (botão “−” ou Win + ↓). Não a feche: a mini-janela fecha junto com ela. Para trazer o medidor de volta, feche a mini-janela ou use o botão de voltar dela.</p>
-  </section>
 
-  <div class="stats">
-    <div class="tile"><b id="peakHold">--</b><span>Pico recente (dBFS)</span></div>
-    <div class="tile"><b id="peakMax">--</b><span>Pico máximo (dBFS)</span></div>
-    <div class="tile"><b id="clips">0</b><span>Estouros (clipping)</span></div>
-    <div class="tile"><b id="lr">-- / --</b><span>Pico E / D (dBFS)</span></div>
+  <!-- coluna lateral -->
+  <div class="col">
+    <div class="stats">
+      <div class="tile"><b id="peakHold">--</b><span>Pico recente (dBFS)</span></div>
+      <div class="tile"><b id="peakMax">--</b><span>Pico máximo (dBFS)</span></div>
+      <div class="tile"><b id="clips">0</b><span>Estouros (clipping)</span></div>
+      <div class="tile"><b id="lr">-- / --</b><span>Pico E / D (dBFS)</span></div>
+    </div>
+
+    <section class="card" aria-label="Últimos 30 segundos">
+      <h2>Últimos 30 segundos</h2>
+      <canvas id="hist" aria-hidden="true"></canvas>
+      <p class="note">Linha verde: nível médio. Linha fina: pico. A faixa verde (−18 a −6 dBFS) é a região recomendada para o pico da voz.</p>
+    </section>
+
+    <details class="card" id="help" open>
+      <summary>Como ligar e usar</summary>
+      <ol class="steps">
+        <li><div><strong>Ligue a mesa ao notebook.</strong> Use a saída <strong>TAPE OUT</strong> (RCA) da mesa. Comece com os faders do MAIN MIX baixos e o ganho do microfone do Windows no mínimo.</div></li>
+        <li><div><strong>Escolha a entrada</strong> acima e toque em <strong>Iniciar medição</strong>. Permita o microfone quando o navegador pedir.</div></li>
+        <li><div><strong>Mande som</strong> por um canal só, com o PAN no centro, e suba o <strong>GAIN</strong> aos poucos até a barra chegar à zona verde.</div></li>
+        <li><div><strong>Siga o ajuste sugerido.</strong> O número grande ao lado mostra quantos dB subir ou descer. Abra a <strong>mini-janela</strong> para manter o medidor à vista.</div></li>
+      </ol>
+      <div class="warnbox">Nunca ligue a saída <strong>PHONES</strong> nem entradas com <strong>+48 V</strong> ligado ao notebook. Se a barra encostar no máximo com tudo baixo, o cabo não atenua o suficiente: pare e use uma interface USB.</div>
+    </details>
+
+    <details class="card">
+      <summary>Detalhes da entrada</summary>
+      <dl>
+        <dt>Cancelamento de eco</dt><dd id="s-echo">--</dd>
+        <dt>Redução de ruído</dt><dd id="s-ns">--</dd>
+        <dt>Ganho automático</dt><dd id="s-agc">--</dd>
+        <dt>Canais recebidos</dt><dd id="s-ch">--</dd>
+        <dt>Taxa de amostragem</dt><dd id="s-sr">--</dd>
+      </dl>
+      <p class="note" id="s-note">O medidor pede ao navegador que desligue o processamento de áudio. Se algum aparecer como “ligado”, a leitura pode estar sendo alterada por ele.</p>
+    </details>
   </div>
-
-  <section class="panel" aria-label="Últimos 30 segundos">
-    <h2>Últimos 30 segundos</h2>
-    <canvas id="hist" aria-hidden="true"></canvas>
-    <p class="note">Linha verde: nível médio. Linha fina: pico. A faixa verde (−18 a −6 dBFS) é a região recomendada para o pico da voz.</p>
-  </section>
-
-  <section class="panel" aria-label="Detalhes da entrada">
-    <h2>Detalhes da entrada</h2>
-    <dl>
-      <dt>Cancelamento de eco</dt><dd id="s-echo">--</dd>
-      <dt>Redução de ruído</dt><dd id="s-ns">--</dd>
-      <dt>Ganho automático</dt><dd id="s-agc">--</dd>
-      <dt>Canais recebidos</dt><dd id="s-ch">--</dd>
-      <dt>Taxa de amostragem</dt><dd id="s-sr">--</dd>
-    </dl>
-    <p class="note" id="s-note">O medidor pede ao navegador que desligue o processamento de áudio. Se algum aparecer como “ligado”, a leitura pode estar sendo alterada por ele.</p>
-  </section>
 
   <footer>
-    dBFS indica quanto do limite digital está em uso (0 é o máximo). Não é dB SPL. A leitura depende da placa de som, do cabo e do ganho de entrada do Windows. Use a calibração para alinhar com a mesa. Nada é gravado nem enviado.
+    dBFS indica quanto do limite digital está em uso (0 é o máximo). Não é dB SPL. A leitura depende da placa de som, do cabo e do ganho de entrada do Windows; use a calibração para alinhar com a mesa. Nada é gravado nem enviado.
+    <br>Atalhos: <kbd>Espaço</kbd> iniciar/parar · <kbd>P</kbd> mini-janela · <kbd>R</kbd> zerar picos.
   </footer>
-</main>
+</div>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id) || (pip && pip.document.getElementById(id));
   const TARGET = -12, HIST_MS = 30000;
   let ctx = null, stream = null, anL = null, anR = null, bufL = null, bufR = null;
-  let running = false, pip = null;
+  let running = false, pip = null, wake = null;
   let msS = [0, 0], lastNow = 0, lastHist = 0, hist = [];
   let rmsDisp = -120, peakHold = -120, peakHoldT = 0, peakMax = -120, clips = 0, lastClip = -1e9;
   let tickWorker = null, tickTimer = 0;
@@ -167,9 +293,10 @@
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColors(); });
 
   /* ---------- preferências ---------- */
-  function savePref(k, v) { safe(() => localStorage.setItem("medidor:" + k, v)); }
-  function loadPref(k) { return safe(() => localStorage.getItem("medidor:" + k)); }
+  const savePref = (k, v) => safe(() => localStorage.setItem("medidor:" + k, v));
+  const loadPref = k => safe(() => localStorage.getItem("medidor:" + k));
   ["chan", "speed", "cal"].forEach(k => { const v = loadPref(k); if (v !== null && v !== undefined) $(k).value = v; });
+  if (loadPref("helpSeen")) $("help").open = false;
   const cal = () => parseFloat($("cal").value.replace(",", ".")) || 0;
   ["chan", "speed", "cal"].forEach(k => $(k).addEventListener("change", () => savePref(k, $(k).value)));
 
@@ -191,7 +318,7 @@
 
   function drawMeter(rms, peak) {
     const f = fit($("meter")); if (!f) return;
-    const { g, w } = f, segs = 40, step = 60 / segs, gap = 2, top = 8, bh = 30;
+    const { g, w } = f, segs = 40, step = 60 / segs, gap = 2, top = 8, bh = 34;
     const sw = (w - gap * (segs - 1)) / segs;
     for (let i = 0; i < segs; i++) {
       const mid = -60 + i * step + step / 2;
@@ -207,7 +334,7 @@
     for (let d = -60; d <= 0; d += 10) {
       const x = ((d + 60) / 60) * w;
       g.textAlign = d === -60 ? "left" : d === 0 ? "right" : "center";
-      g.fillText(d === 0 ? "0" : String(d).replace("-", "−"), x, top + bh + 18);
+      g.fillText(d === 0 ? "0" : String(d).replace("-", "−"), x, top + bh + 20);
     }
   }
 
@@ -240,20 +367,37 @@
     return m;
   }
   function status(now) {
-    if (!running) return { s: "Parado", t: "Toque em “Iniciar medição” e permita o acesso ao microfone.", c: "muted" };
-    if (now - lastClip < 3000) return { s: "Clipping: o sinal estourou", t: "Reduza o ganho ou o volume de entrada em pelo menos 6 dB.", c: "bad" };
+    if (!running) return { s: "Parado", t: "Escolha a entrada e toque em “Iniciar medição”.", c: "muted", a: null };
+    if (now - lastClip < 3000) return { s: "Clipping: o sinal estourou", t: "Reduza o ganho ou o volume de entrada em pelo menos 6 dB.", c: "bad", a: "−6 dB", al: "reduza o ganho" };
     const r = recentPeak(now);
-    if (r < -55) return { s: "Sem sinal", t: "Fale ou toque o som que você quer medir.", c: "muted" };
+    if (r < -55) return { s: "Sem sinal", t: "Fale ou toque o som que você quer medir.", c: "muted", a: null };
     const diff = Math.round(TARGET - r);
-    if (r > -6) return { s: "Alto demais", t: `Reduza cerca de ${Math.abs(diff)} dB para ter margem contra distorção.`, c: "warn" };
-    if (r >= -18) return { s: "Nível bom", t: "Mantenha o ajuste atual.", c: "ok" };
-    return { s: "Baixo", t: `Aumente cerca de ${diff} dB no ganho ou no volume de entrada.`, c: "low" };
+    if (r > -6) return { s: "Alto demais", t: `Reduza cerca de ${Math.abs(diff)} dB para ter margem contra distorção.`, c: "warn", a: `−${Math.abs(diff)} dB`, al: "reduza o ganho" };
+    if (r >= -18) return { s: "Nível bom", t: "Mantenha o ajuste atual.", c: "ok", a: "OK", al: "mantenha como está" };
+    return { s: "Baixo", t: `Aumente cerca de ${diff} dB no ganho ou no volume de entrada.`, c: "low", a: `+${diff} dB`, al: "aumente o ganho" };
+  }
+
+  function paintStatus(s) {
+    const pill = $("pill"), adj = $("adj"), mini = $("mini");
+    pill.textContent = s.s; pill.style.color = `var(--${s.c})`;
+    $("tip").textContent = s.t;
+    mini.style.setProperty("--st", `var(--${s.c})`);
+    adj.hidden = !s.a;
+    if (s.a) {
+      adj.firstElementChild.textContent = s.a;
+      adj.lastElementChild.textContent = s.al;
+      adj.style.color = `var(--${s.c})`;
+    }
   }
 
   function setChip() {
-    let t = "Parado", c = "muted";
-    if (running) { t = "Medindo"; c = "ok"; }
-    $("chip").textContent = "● " + t; $("chip").style.color = `var(--${c})`;
+    $("chip").textContent = running ? "Medindo" : "Parado";
+    $("chip").dataset.state = running ? "run" : "stop";
+    $("chip").style.color = running ? "var(--ok)" : "var(--muted)";
+  }
+  function setGo() {
+    $("go").classList.toggle("running", running);
+    $("goLabel").textContent = running ? "Parar medição" : "Iniciar medição";
   }
 
   /* ---------- análise por quadro ---------- */
@@ -305,14 +449,12 @@
       while (hist.length && now - hist[0].t > HIST_MS) hist.shift();
     }
 
-    const s = status(now);
     $("rms").textContent = fmt(rmsDisp);
     $("peakHold").textContent = fmt(peakHold);
     $("peakMax").textContent = fmt(peakMax);
     $("clips").textContent = clips;
     $("lr").textContent = fmt(pk[0]) + " / " + fmt(pk[1]);
-    $("pill").textContent = s.s; $("pill").style.color = `var(--${s.c})`;
-    $("tip").textContent = s.t;
+    paintStatus(status(now));
     drawMeter(rmsDisp, peakHold);
     drawHist(now);
   }
@@ -340,8 +482,18 @@
   }
 
   /* ---------- áudio ---------- */
-  const showError = m => ($("erro").textContent = m || "");
+  function showError(m) {
+    $("erro").textContent = m || "";
+    $("erroBox").hidden = !m;
+  }
   const onoff = v => (v === true ? "ligado" : v === false ? "desligado" : "indisponível");
+
+  async function holdScreen(on) {
+    try {
+      if (on && navigator.wakeLock) wake = await navigator.wakeLock.request("screen");
+      else if (wake) { await wake.release(); wake = null; }
+    } catch (e) { /* opcional */ }
+  }
 
   async function listDevices(selected) {
     try {
@@ -395,19 +547,20 @@
     track.addEventListener("ended", () => { showError("A entrada de áudio foi desconectada."); stop(); });
 
     msS = [0, 0]; lastNow = 0; hist = []; rmsDisp = -120; peakHold = -120;
-    running = true; $("go").textContent = "Parar"; setChip();
+    running = true; setGo(); setChip(); holdScreen(true);
+    if (!loadPref("helpSeen")) { savePref("helpSeen", "1"); $("help").open = false; }
     restartLoop();
   }
 
   function stop(silent) {
-    running = false; restartLoop();
+    running = false; restartLoop(); holdScreen(false);
     if (stream) stream.getTracks().forEach(t => t.stop());
     if (ctx) ctx.close();
     stream = ctx = anL = anR = null;
-    $("go").textContent = "Iniciar medição"; setChip();
+    setGo(); setChip();
     if (!silent) {
-      const s = status(performance.now());
-      $("pill").textContent = s.s; $("pill").style.color = `var(--${s.c})`; $("tip").textContent = s.t; $("rms").textContent = "--";
+      paintStatus(status(performance.now()));
+      $("rms").textContent = "--";
       drawMeter(-120, -120);
     }
   }
@@ -424,7 +577,7 @@
     }
     if (pip) { pip.focus(); return; }
     try {
-      pip = await documentPictureInPicture.requestWindow({ width: 400, height: 300 });
+      pip = await documentPictureInPicture.requestWindow({ width: 420, height: 360 });
     } catch (e) { showError("Não foi possível abrir a mini-janela: " + e.message); return; }
     [...document.styleSheets].forEach(ss => {
       try {
@@ -436,21 +589,34 @@
     pip.document.body.classList.add("pip");
     pip.document.body.append($("mini"));
     $("miniNote").hidden = false;
+    pip.addEventListener("keydown", onKey);
     pip.addEventListener("pagehide", () => {
       $("miniHome").append($("mini")); $("miniNote").hidden = true; pip = null; restartLoop();
     });
     restartLoop();
   }
 
+  /* ---------- atalhos de teclado ---------- */
+  function onKey(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = e.target && e.target.tagName;
+    if (["INPUT", "SELECT", "TEXTAREA", "BUTTON", "SUMMARY"].includes(tag)) return;
+    if (e.code === "Space") { e.preventDefault(); running ? stop() : start(); }
+    else if (e.key === "p" || e.key === "P") openMini();
+    else if (e.key === "r" || e.key === "R") resetPeaks();
+  }
+  document.addEventListener("keydown", onKey);
+
   $("go").addEventListener("click", () => (running ? stop() : start()));
   $("reset").addEventListener("click", resetPeaks);
   $("pipbtn").addEventListener("click", openMini);
+  $("erroX").addEventListener("click", () => showError(""));
   $("dev").addEventListener("change", () => { if (running) start(); });
   if (!("documentPictureInPicture" in window)) {
     $("pipbtn").title = "Disponível no Chrome e no Edge 116 ou mais novos";
   }
   window.addEventListener("resize", () => { if (!running) { drawMeter(-120, -120); drawHist(performance.now()); } });
-  setChip(); drawMeter(-120, -120); drawHist(performance.now());
+  setChip(); setGo(); paintStatus(status(0)); drawMeter(-120, -120); drawHist(performance.now());
 
   // Permite instalar a página como aplicativo e abri-la mesmo sem internet.
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
